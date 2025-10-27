@@ -1,0 +1,2 @@
+# xinruoxi-app
+tarot divination
