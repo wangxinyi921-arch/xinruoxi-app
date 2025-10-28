@@ -5,7 +5,16 @@ import base64
 import os
 
 # ============ 页面设置 ============
-st.set_page_config(page_title="塔罗抽牌占卜 🔮", page_icon="🔮", layout="centered")
+st.set_page_config(page_title="Tarot Divination - XinRuoXi", page_icon="🔮", layout="centered")
+# ---- 自定义标题字体颜色 ----
+st.markdown("""
+    <style>
+    h1 {
+        color: white !important;
+        text-shadow: 0px 0px 8px rgba(255, 255, 255, 0.3);
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 # ============ 背景函数 ============
 def set_background(image_file):
@@ -63,7 +72,7 @@ if "drawn" not in st.session_state:
 # ============ 页面逻辑 ============
 if not st.session_state["drawn"]:
     # 抽牌前 → 使用浅色背景（默认）
-    st.markdown("<h1 style='text-align:center; color:#333;'>🔮 塔罗抽牌占卜</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align:center; color:#333;'>🔮 Tarot Divination - RuoXi</h1>", unsafe_allow_html=True)
     question = st.text_input("✨ 你的问题是什么？", key="question_input")
     num_cards = st.number_input("你想抽几张牌？", min_value=1, max_value=5, step=1)
     draw_button = st.button("抽牌！")
