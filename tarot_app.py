@@ -2,15 +2,19 @@ import streamlit as st
 import random
 import os
 from PIL import Image
+import base64 
 
 # ---- 页面设置 ----
 st.set_page_config(page_title="Tarot Divination - RuoXi", layout="wide")
 
 # ---- 背景函数 ----
+#
+# ---- 背景函数 (修正版) ----
 def set_background(image_path):
     with open(image_path, "rb") as file:
         data = file.read()
-    encoded = data.hex()
+    # 使用正确的 base64 编码
+    encoded = base64.b64encode(data).decode()
     bg_style = f"""
     <style>
     .stApp {{
@@ -22,7 +26,6 @@ def set_background(image_path):
     </style>
     """
     st.markdown(bg_style, unsafe_allow_html=True)
-
 
 # ---- 加载图片（强制逆位旋转180°） ----
 def load_card_image(path, reversed_=False):
@@ -197,7 +200,7 @@ if "reversed" not in st.session_state:
     st.session_state["reversed"] = []
 
 # ---- 背景 ----
-set_background("images/background.jpg")
+# set_background("images/background.jpg")
 
 # ---- 标题 ----
 st.markdown("<h1 style='text-align:center; color:white;'>🔮 Tarot Divination - RuoXi</h1>", unsafe_allow_html=True)
@@ -216,7 +219,8 @@ if st.button("抽牌！"):
 
 # ---- 抽牌后展示 ----
 if st.session_state["drawn"]:
-    # ... 其他代码 ...
+    # 背景在展示牌时设置
+    set_background("images/background.jpg")
     cols = st.columns(len(st.session_state["drawn_cards"]))
     for i, card in enumerate(st.session_state["drawn_cards"]):
         with cols[i]:
