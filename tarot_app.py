@@ -4,100 +4,105 @@ from PIL import Image
 import base64
 import os
 
-# ============================
-# 🌟 Tarot App - Simple Final Version
-# ============================
-# ✅ 背景只在抽牌后显示
-# ✅ 背景时字体自动变白
-# ✅ 每张牌底下有一个“翻开这张牌”按钮
-# ✅ 自动调整图片大小
-# ============================
+# ============ 页面设置 ============
+st.set_page_config(page_title="塔罗抽牌占卜 🔮", page_icon="🔮", layout="centered")
 
-st.set_page_config(page_title="塔罗抽牌占卜", page_icon="🔮", layout="centered")
-
-
-# ---- 背景设置函数 ----
+# ============ 背景函数 ============
 def set_background(image_file):
-    """设置背景图（base64嵌入CSS）"""
-    with open(image_file, "rb") as f:
-        encoded_string = base64.b64encode(f.read()).decode()
-    st.markdown(
-        f"""
-        <style>
-        .stApp {{
-            background-image: url(data:image/png;base64,{encoded_string});
-            background-size: cover;
-            background-position: center;
-        }}
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
+    with open(image_file, "rb") as file:
+        encoded = base64.b64encode(file.read()).decode()
+    bg_style = f"""
+    <style>
+    .stApp {{
+        background-image: url("data:image/jpg;base64,{encoded}");
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+    }}
+    </style>
+    """
+    st.markdown(bg_style, unsafe_allow_html=True)
 
-
-# ---- 加载塔罗牌图片 ----
-def load_card_image(image_path, reversed_=False):
-    img = Image.open(image_path)
-    img = img.resize((350, 500))
+# ============ 图片加载函数 ============
+def load_card_image(path, reversed_=False):
+    """加载塔罗牌，支持逆位旋转"""
+    img = Image.open(path)
     if reversed_:
         img = img.rotate(180)
     return img
 
 
-# ---- 页面标题 ----
-st.markdown("<h1 style='text-align: center;'>🔮 塔罗抽牌占卜</h1>", unsafe_allow_html=True)
+def load_and_crop_back(path):
+    """加载并居中裁剪牌背，裁剪比例 0.6:1"""
+    img = Image.open(path)
+    w, h = img.size
+    target_ratio = 0.6  # 宽:高
+    new_w = int(h * target_ratio)
+    if new_w > w:
+        new_h = int(w / target_ratio)
+        top = (h - new_h) // 2
+        bottom = top + new_h
+        left, right = 0, w
+    else:
+        left = (w - new_w) // 2
+        right = left + new_w
+        top, bottom = 0, h
+    cropped = img.crop((left, top, right, bottom))
+    return cropped
 
-# ---- 输入 ----
-question = st.text_input("✨ 你的问题是什么？")
-num_cards = st.number_input("你想抽几张牌？", min_value=1, max_value=10, step=1, value=1)
+# ============ 初始化状态 ============
+if "drawn_cards" not in st.session_state:
+    st.session_state["drawn_cards"] = []
+if "revealed" not in st.session_state:
+    st.session_state["revealed"] = []
+if "reversed" not in st.session_state:
+    st.session_state["reversed"] = []
+if "drawn" not in st.session_state:
+    st.session_state["drawn"] = False
 
-# ---- 抽牌按钮 ----
-if st.button("抽牌！"):
-    # 设置背景
-    set_background("images/background.png")
+# ============ 页面逻辑 ============
+if not st.session_state["drawn"]:
+    # 抽牌前 → 使用浅色背景（默认）
+    st.markdown("<h1 style='text-align:center; color:#333;'>🔮 塔罗抽牌占卜</h1>", unsafe_allow_html=True)
+    question = st.text_input("✨ 你的问题是什么？", key="question_input")
+    num_cards = st.number_input("你想抽几张牌？", min_value=1, max_value=5, step=1)
+    draw_button = st.button("抽牌！")
 
-    # 设置白色字体
-    st.markdown(
-        """
-        <style>
-        html, body, [class*="st-"], label, p, span, h1, h2, h3, h4, h5, h6 {
-            color: white !important;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
+    if draw_button and question:
+        card_files = [f[:-5] for f in os.listdir("images") if f.endswith(".webp")]
+        st.session_state["drawn_cards"] = random.sample(card_files, num_cards)
+        st.session_state["reversed"] = [random.choice([True, False]) for _ in range(num_cards)]
+        st.session_state["revealed"] = [False] * num_cards
+        st.session_state["drawn"] = True
+        st.rerun()
 
-    # 随机抽牌
-    tarot_files = [f for f in os.listdir("images") if f.endswith(".webp")]
-    selected_cards = random.sample(tarot_files, num_cards)
+else:
+    # 抽牌后 → 加载背景图并使用白色字体
+    set_background("images/background.jpg")
 
-    # 初始化状态
-    st.session_state["drawn_cards"] = selected_cards
-    st.session_state["revealed"] = [False] * num_cards
-    st.session_state["reversed"] = [random.choice([True, False]) for _ in range(num_cards)]
-
-
-# ---- 显示抽牌区 ----
-if "drawn_cards" in st.session_state:
+    st.markdown("<h1 style='text-align:center; color:white;'>🔮 你的塔罗牌结果</h1>", unsafe_allow_html=True)
     cols = st.columns(len(st.session_state["drawn_cards"]))
 
     for i, card in enumerate(st.session_state["drawn_cards"]):
         with cols[i]:
             if st.session_state["revealed"][i]:
-                # 翻开后的正反位显示
+                # 已翻开 → 显示塔罗牌面
                 img = load_card_image(
-                    os.path.join("images", f"{card}"),
-                    reversed_=st.session_state["reversed"][i],
+                    os.path.join("images", f"{card}.webp"),
+                    reversed_=st.session_state["reversed"][i]
                 )
-                st.image(
-                    img,
-                    caption=f"{card}（{'逆位' if st.session_state['reversed'][i] else '正位'}）",
-                )
+                st.image(img, caption=f"{card} ({'逆位' if st.session_state['reversed'][i] else '正位'})")
             else:
-                # 未翻开 → 显示牌背
-                back = load_card_image(os.path.join("images", "back.png"))
-                st.image(back, caption="未翻开的牌")
-                # 翻开按钮
-                if st.button("翻开这张牌", key=f"flip_{i}"):
+                # 未翻开 → 显示裁剪后的牌背
+                back = load_and_crop_back(os.path.join("images", "back.jpg"))
+                st.image(back, caption="点击翻开这张牌")
+                if st.button(f"翻开第{i+1}张", key=f"flip_{i}"):
                     st.session_state["revealed"][i] = True
+                    st.rerun()
+
+    if st.button("🔁 再来一次"):
+        st.session_state["drawn"] = False
+        st.session_state["drawn_cards"] = []
+        st.session_state["revealed"] = []
+        st.session_state["reversed"] = []
+        st.rerun()
